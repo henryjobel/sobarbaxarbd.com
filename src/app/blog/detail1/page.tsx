@@ -1,16 +1,24 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import TopNavOne from '@/components/Header/TopNav/TopNavOne'
 import MenuOne from '@/components/Header/Menu/MenuOne'
-import blogData from '@/data/Blog.json'
+import { blogApi, BlogPost } from '@/lib/api'
 import NewsInsight from '@/components/Home3/NewsInsight';
 import Footer from '@/components/Footer/Footer'
 import { useRouter } from 'next/navigation'
 
 const BlogDetailOne = () => {
+    const [blogData, setBlogData] = useState<BlogPost[]>([])
+
+    useEffect(() => {
+        blogApi.getAll({ limit: '100' })
+            .then(({ data }) => setBlogData(data as BlogPost[]))
+            .catch(() => setBlogData([]))
+    }, [])
+
     const searchParams = useSearchParams()
     const router = useRouter()
 
@@ -19,7 +27,7 @@ const BlogDetailOne = () => {
         blogId = '14'
     }
 
-    const blogMain = blogData[Number(blogId) - 1]
+    const blogMain = blogData.find(b => b.id === blogId) ?? blogData[0]
 
     const handleBlogClick = (category: string) => {
         // Go to blog detail with category selected
@@ -40,10 +48,10 @@ const BlogDetailOne = () => {
             <div className='blog detail1'>
                 <div className="bg-img md:mt-[74px] mt-14">
                     <Image
-                        src={blogMain.thumbImg}
+                        src={blogMain.thumbImg ?? ""}
                         width={5000}
                         height={4000}
-                        alt={blogMain.thumbImg}
+                        alt={blogMain.thumbImg ?? ""}
                         className='w-full min-[1600px]:h-[800px] xl:h-[640px] lg:h-[520px] sm:h-[380px] h-[260px] object-cover'
                     />
                 </div>
@@ -55,7 +63,7 @@ const BlogDetailOne = () => {
                             <div className="author flex items-center gap-4 mt-4">
                                 <div className="avatar w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                                     <Image
-                                        src={blogMain.avatar}
+                                        src={blogMain.avatar ?? ""}
                                         width={200}
                                         height={200}
                                         alt='avatar'

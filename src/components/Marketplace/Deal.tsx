@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { countdownTime } from '@/store/countdownTime'
 import { useRouter } from 'next/navigation'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
-import productData from '@/data/Product.json'
 import Product from '../Product/Product'
+import { useProducts } from '@/context/ProductsContext'
 
 const Deal = () => {
     const [timeLeft, setTimeLeft] = useState(countdownTime());
@@ -25,6 +25,8 @@ const Deal = () => {
         // redirect to shop with category selected
         router.push(`/product/default?id=${productId}`);
     };
+
+    const { products } = useProducts()
 
     return (
         <div className=" md:pt-[60px] pt-10">
@@ -50,7 +52,7 @@ const Deal = () => {
                 </div>
                 <div
                     className="list grid xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 sm:gap-[30px] gap-[20px] md:mt-10 mt-6">
-                    {productData.slice(150, 155).map(item => (
+                    {products.slice(150, 155).map(item => (
                         <Product data={item} type='marketplace' key={item.id} />
                     ))}
                 </div>

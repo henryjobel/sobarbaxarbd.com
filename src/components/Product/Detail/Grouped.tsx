@@ -114,6 +114,37 @@ const Grouped: React.FC<Props> = ({ data, productId }) => {
         setActiveTab(prevTab => prevTab === tab ? undefined : tab)
     }
 
+    const [reviewName, setReviewName] = useState('')
+    const [reviewEmail, setReviewEmail] = useState('')
+    const [reviewContent, setReviewContent] = useState('')
+    const [reviewRating, setReviewRating] = useState(5)
+    const [reviewLoading, setReviewLoading] = useState(false)
+    const [reviewSuccess, setReviewSuccess] = useState(false)
+    const [reviewError, setReviewError] = useState('')
+
+    const handleReviewSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setReviewLoading(true)
+        setReviewError('')
+        setReviewSuccess(false)
+        try {
+            const token = localStorage.getItem('access_token')
+            const res = await fetch('/api/v1/reviews', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({ productId: productMain.id, rating: reviewRating, content: reviewContent }),
+            })
+            if (!res.ok) throw new Error('Failed to submit review')
+            setReviewSuccess(true)
+            setReviewContent('')
+            setReviewRating(5)
+        } catch {
+            setReviewError('Failed to submit review. Please try again.')
+        } finally {
+            setReviewLoading(false)
+        }
+    }
+
     return (
         <>
             <div className="product-detail grouped">
@@ -248,7 +279,7 @@ const Grouped: React.FC<Props> = ({ data, productId }) => {
                                 <div className='desc text-secondary mt-3'>{productMain.description}</div>
                             </div>
                             <div className="list-group mt-1">
-                                {data.slice(Number(productId), Number(productId) + 3).map(item => (
+                                {data.filter(p => p.id !== productMain.id).slice(0, 3).map(item => (
                                     <div key={item.id} className="item flex items-center justify-between mt-6 pb-6 border-b border-line">
                                         <div className="left flex items-center gap-5">
                                             <div className="bg-img">

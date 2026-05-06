@@ -1,20 +1,20 @@
 'use client'
 
-// CompareContext.tsx
-import React, { createContext, useContext, useState, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { ProductType } from '@/type/ProductType';
+import { compareApi, normalizeApiProduct } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
-interface CompareItem extends ProductType {
-}
+interface CompareItem extends ProductType {}
 
 interface CompareState {
     compareArray: CompareItem[]
 }
 
 type CompareAction =
-    | { type: 'ADD_TO_WISHLIST'; payload: ProductType }
-    | { type: 'REMOVE_FROM_WISHLIST'; payload: string }
-    | { type: 'LOAD_WISHLIST'; payload: CompareItem[] }
+    | { type: 'ADD_TO_COMPARE'; payload: ProductType }
+    | { type: 'REMOVE_FROM_COMPARE'; payload: string }
+    | { type: 'LOAD_COMPARE'; payload: CompareItem[] }
 
 interface CompareContextProps {
     compareState: CompareState;
@@ -26,22 +26,15 @@ const CompareContext = createContext<CompareContextProps | undefined>(undefined)
 
 const CompareReducer = (state: CompareState, action: CompareAction): CompareState => {
     switch (action.type) {
-        case 'ADD_TO_WISHLIST':
-            const newItem: CompareItem = { ...action.payload };
-            return {
-                ...state,
-                compareArray: [...state.compareArray, newItem],
-            };
-        case 'REMOVE_FROM_WISHLIST':
-            return {
-                ...state,
-                compareArray: state.compareArray.filter((item) => item.id !== action.payload),
-            };
-        case 'LOAD_WISHLIST':
-            return {
-                ...state,
-                compareArray: action.payload,
-            };
+        case 'ADD_TO_COMPARE': {
+            const exists = state.compareArray.find(i => i.id === action.payload.id);
+            if (exists) return state;
+            return { ...state, compareArray: [...state.compareArray, { ...action.payload }] };
+        }
+        case 'REMOVE_FROM_COMPARE':
+            return { ...state, compareArray: state.compareArray.filter(item => item.id !== action.payload) };
+        case 'LOAD_COMPARE':
+            return { ...state, compareArray: action.payload };
         default:
             return state;
     }
@@ -49,14 +42,31 @@ const CompareReducer = (state: CompareState, action: CompareAction): CompareStat
 
 export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [compareState, dispatch] = useReducer(CompareReducer, { compareArray: [] });
+    const { isAuthenticated } = useAuth();
 
-    const addToCompare = (item: ProductType) => {
-        dispatch({ type: 'ADD_TO_WISHLIST', payload: item });
-    };
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        compareApi.getCompare().then(items => {
+            const loaded: CompareItem[] = items.map(item =>
+                normalizeApiProduct(item.product as unknown as Parameters<typeof normalizeApiProduct>[0])
+            );
+            dispatch({ type: 'LOAD_COMPARE', payload: loaded });
+        }).catch(() => {});
+    }, [isAuthenticated]);
 
-    const removeFromCompare = (itemId: string) => {
-        dispatch({ type: 'REMOVE_FROM_WISHLIST', payload: itemId });
-    };
+    const addToCompare = useCallback((item: ProductType) => {
+        dispatch({ type: 'ADD_TO_COMPARE', payload: item });
+        if (isAuthenticated) {
+            compareApi.addItem(item.id).catch(() => {});
+        }
+    }, [isAuthenticated]);
+
+    const removeFromCompare = useCallback((itemId: string) => {
+        dispatch({ type: 'REMOVE_FROM_COMPARE', payload: itemId });
+        if (isAuthenticated) {
+            compareApi.removeItem(itemId).catch(() => {});
+        }
+    }, [isAuthenticated]);
 
     return (
         <CompareContext.Provider value={{ compareState, addToCompare, removeFromCompare }}>
@@ -67,8 +77,6 @@ export const CompareProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 export const useCompare = () => {
     const context = useContext(CompareContext);
-    if (!context) {
-        throw new Error('useCompare must be used within a CompareProvider');
-    }
+    if (!context) throw new Error('useCompare must be used within a CompareProvider');
     return context;
 };

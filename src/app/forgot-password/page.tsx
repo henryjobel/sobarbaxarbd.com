@@ -6,8 +6,29 @@ import MenuOne from '@/components/Header/Menu/MenuOne'
 import Breadcrumb from '@/components/Breadcrumb/Breadcrumb'
 import Footer from '@/components/Footer/Footer'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
+import { authApi } from '@/lib/api'
 
 const ForgotPassword = () => {
+    const [email, setEmail] = useState('')
+    const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
+    const [loading, setLoading] = useState(false)
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setError('')
+        setSuccess('')
+        setLoading(true)
+        try {
+            await authApi.forgotPassword(email)
+            setSuccess('If an account with that email exists, a reset link has been sent.')
+            setEmail('')
+        } catch (err: any) {
+            setError(err.message || 'Something went wrong. Please try again.')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     return (
         <>
@@ -22,12 +43,28 @@ const ForgotPassword = () => {
                         <div className="left md:w-1/2 w-full lg:pr-[60px] md:pr-[40px] md:border-r border-line">
                             <div className="heading4">Reset your password</div>
                             <div className="body1 mt-2">We will send you an email to reset your password</div>
-                            <form className="md:mt-7 mt-4">
+                            <form className="md:mt-7 mt-4" onSubmit={handleSubmit}>
+                                {error && (
+                                    <div className="error-message text-red-500 text-sm mb-4 p-3 bg-red-50 rounded-lg">{error}</div>
+                                )}
+                                {success && (
+                                    <div className="success-message text-green-600 text-sm mb-4 p-3 bg-green-50 rounded-lg">{success}</div>
+                                )}
                                 <div className="email ">
-                                    <input className="border-line px-4 pt-3 pb-3 w-full rounded-lg" id="username" type="email" placeholder="Username or email address *" required  />
+                                    <input
+                                        className="border-line px-4 pt-3 pb-3 w-full rounded-lg"
+                                        id="username"
+                                        type="email"
+                                        placeholder="Username or email address *"
+                                        required
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
+                                    />
                                 </div>
                                 <div className="block-button md:mt-7 mt-4">
-                                    <button className="button-main">Submit</button>
+                                    <button className="button-main" type="submit" disabled={loading}>
+                                        {loading ? 'Sending...' : 'Submit'}
+                                    </button>
                                 </div>
                             </form>
                         </div>

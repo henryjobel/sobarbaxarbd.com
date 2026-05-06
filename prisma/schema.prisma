@@ -1,0 +1,315 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── USER ────────────────────────────────────────────────────────────────────
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  phone     String?
+  avatar    String?
+  role      String   @default("user") // "user" | "admin"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses Address[]
+  cart      CartItem[]
+  wishlist  WishlistItem[]
+  orders    Order[]
+  reviews   Review[]
+  compare   CompareItem[]
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  phone      String?
+  street     String
+  city       String
+  state      String?
+  postalCode String?
+  country    String  @default("BD")
+  isDefault  Boolean @default(false)
+}
+
+// ─── CATEGORY ────────────────────────────────────────────────────────────────
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  parentId    String?
+  parent      Category? @relation("SubCategories", fields: [parentId], references: [id])
+  children    Category[] @relation("SubCategories")
+  products    Product[]
+  createdAt   DateTime  @default(now())
+}
+
+// ─── PRODUCT ─────────────────────────────────────────────────────────────────
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  description  String?
+  price        Float
+  originPrice  Float?
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id])
+  type         String?   // "fashion", "cosmetic", etc.
+  gender       String?   // "male", "female", "unisex"
+  brand        String?
+  sold         Int      @default(0)
+  quantity     Int      @default(0)
+  rate         Float    @default(0)
+  isNew        Boolean  @default(false)
+  onSale       Boolean  @default(false)
+  action       String?  // "add to cart", "quick shop", etc.
+  status       String   @default("active") // "active" | "draft" | "archived"
+  thumbImage   String?  // JSON string of array
+  images       String?  // JSON string of array
+  variations   String?  // JSON string of ProductVariation[]
+  sizes        String?  // JSON string of string[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cartItems    CartItem[]
+  wishlistItems WishlistItem[]
+  orderItems   OrderItem[]
+  reviews      Review[]
+  compareItems CompareItem[]
+}
+
+// ─── CART ─────────────────────────────────────────────────────────────────────
+model CartItem {
+  id         String  @id @default(cuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Int     @default(1)
+  size       String?
+  color      String?
+  selectedVariation String? // JSON
+  createdAt  DateTime @default(now())
+}
+
+// ─── WISHLIST ─────────────────────────────────────────────────────────────────
+model WishlistItem {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+// ─── COMPARE ──────────────────────────────────────────────────────────────────
+model CompareItem {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+// ─── COUPON ───────────────────────────────────────────────────────────────────
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  type        String   @default("percent") // "percent" | "fixed"
+  value       Float
+  minOrder    Float    @default(0)
+  maxUses     Int?
+  usedCount   Int      @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// ─── ORDER ────────────────────────────────────────────────────────────────────
+model Order {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  subtotal      Float
+  discount      Float       @default(0)
+  shipping      Float       @default(0)
+  total         Float
+  couponCode    String?
+  status        String      @default("pending") // pending|processing|shipped|delivered|cancelled
+  paymentMethod String      @default("cod")
+  paymentStatus String      @default("unpaid") // unpaid|paid
+  note          String?
+  // Shipping address (snapshot)
+  shipName      String?
+  shipPhone     String?
+  shipStreet    String?
+  shipCity      String?
+  shipState     String?
+  shipPostal    String?
+  shipCountry   String?
+  trackingNumber String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  price     Float
+  quantity  Int
+  size      String?
+  color     String?
+  image     String?
+}
+
+// ─── REVIEW ───────────────────────────────────────────────────────────────────
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+// ─── SITE SETTINGS ────────────────────────────────────────────────────────────
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ─── PASSWORD RESET ───────────────────────────────────────────────────────────
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ─── CMS: CUSTOM PAGES ───────────────────────────────────────────────────────
+model Page {
+  id         String   @id @default(cuid())
+  title      String
+  slug       String   @unique
+  content    String?
+  excerpt    String?
+  status     String   @default("draft") // "published" | "draft"
+  template   String   @default("default") // "default" | "full-width"
+  metaTitle  String?
+  metaDesc   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ─── CMS: MENUS ───────────────────────────────────────────────────────────────
+model Menu {
+  id        String     @id @default(cuid())
+  name      String
+  location  String     @unique // "primary" | "footer" | "mobile"
+  items     MenuItem[]
+  createdAt DateTime   @default(now())
+}
+
+model MenuItem {
+  id        String     @id @default(cuid())
+  menuId    String
+  menu      Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  label     String
+  url       String
+  target    String     @default("_self")
+  order     Int        @default(0)
+  parentId  String?
+  parent    MenuItem?  @relation("SubItems", fields: [parentId], references: [id])
+  children  MenuItem[] @relation("SubItems")
+  createdAt DateTime   @default(now())
+}
+
+// ─── CMS: SLIDES ─────────────────────────────────────────────────────────────
+model Slide {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  description String?
+  buttonText  String   @default("Shop Now")
+  buttonLink  String   @default("/shop")
+  image       String
+  bgColor     String?
+  textColor   String   @default("#ffffff")
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// ─── CMS: BANNERS ─────────────────────────────────────────────────────────────
+model Banner {
+  id        String   @id @default(cuid())
+  title     String?
+  subtitle  String?
+  image     String
+  link      String?
+  position  String   @default("home") // "home", "shop", "sidebar"
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// ─── CMS: PAGE BLOCKS ─────────────────────────────────────────────────────────
+model PageBlock {
+  id        String   @id @default(cuid())
+  page      String   // "home", "about", "contact"
+  section   String   // "hero", "features", "cta"
+  key       String   // "title", "subtitle", "image", "body"
+  type      String   @default("text") // "text", "html", "image", "url"
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@unique([page, section, key])
+}
+
+// ─── BLOG ─────────────────────────────────────────────────────────────────────
+model Blog {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  category    String?
+  tag         String?
+  author      String?
+  avatar      String?
+  thumbImg    String?
+  coverImg    String?
+  subImg      String?  // JSON array
+  shortDesc   String?
+  description String?
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

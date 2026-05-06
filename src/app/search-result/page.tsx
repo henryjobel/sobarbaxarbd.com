@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 import TopNavOne from '@/components/Header/TopNav/TopNavOne'
@@ -7,7 +7,7 @@ import MenuOne from '@/components/Header/Menu/MenuOne'
 import Breadcrumb from '@/components/Breadcrumb/Breadcrumb'
 import Footer from '@/components/Footer/Footer'
 import { ProductType } from '@/type/ProductType'
-import productData from '@/data/Product.json'
+import { productsApi, normalizeApiProduct } from '@/lib/api'
 import Product from '@/components/Product/Product'
 import HandlePagination from '@/components/Other/HandlePagination'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
@@ -15,11 +15,17 @@ import * as Icon from "@phosphor-icons/react/dist/ssr";
 const SearchResult = () => {
     const [searchKeyword, setSearchKeyword] = useState<string>('');
     const [currentPage, setCurrentPage] = useState(0);
+    const [allProducts, setAllProducts] = useState<ProductType[]>([]);
     const productsPerPage = 8;
     const offset = currentPage * productsPerPage;
-    let filteredData = productData
 
     const router = useRouter()
+
+    useEffect(() => {
+        productsApi.getAll({ limit: '200' })
+            .then(res => setAllProducts(res.products.map(normalizeApiProduct)))
+            .catch(() => setAllProducts([]))
+    }, [])
 
     const handleSearch = (value: string) => {
         router.push(`/search-result?query=${value}`)
@@ -29,10 +35,12 @@ const SearchResult = () => {
     const searchParams = useSearchParams()
     let query = searchParams.get('query') as string
 
+    let filteredData: ProductType[]
     if (query === null) {
         query = 'dress'
+        filteredData = allProducts
     } else {
-        filteredData = productData.filter((product) =>
+        filteredData = allProducts.filter((product) =>
             product.name.toLowerCase().includes(query.toLowerCase()) ||
             product.type.toLowerCase().includes(query.toLowerCase())
         );
@@ -124,7 +132,7 @@ const SearchResult = () => {
                                 item.id === 'no-data' ? (
                                     <div key={item.id} className="no-data-product">No products match the selected criteria.</div>
                                 ) : (
-                                    <Product key={item.id} data={item} type='grid' />
+                                    <Product key={item.id} data={item} type='grid' style='style-1' />
                                 )
                             ))}
                         </div>

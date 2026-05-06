@@ -1,8 +1,9 @@
 'use client'
 
 // WishlistContext.tsx
-import React, { createContext, useContext, useState, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { ProductType } from '@/type/ProductType';
+import { wishlistApi, normalizeApiProduct } from '@/lib/api';
 
 interface WishlistItem extends ProductType {
 }
@@ -47,16 +48,36 @@ const WishlistReducer = (state: WishlistState, action: WishlistAction): Wishlist
     }
 };
 
+function isAuthenticated(): boolean {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem('access_token');
+}
+
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [wishlistState, dispatch] = useReducer(WishlistReducer, { wishlistArray: [] });
 
-    const addToWishlist = (item: ProductType) => {
-        dispatch({ type: 'ADD_TO_WISHLIST', payload: item });
-    };
+    // On mount, if authenticated, load wishlist from server
+    useEffect(() => {
+        if (!isAuthenticated()) return
+        wishlistApi.getWishlist().then((items) => {
+            const loaded: WishlistItem[] = items.map((item) => normalizeApiProduct(item.product as any))
+            dispatch({ type: 'LOAD_WISHLIST', payload: loaded })
+        }).catch(() => { /* silent */ })
+    }, [])
 
-    const removeFromWishlist = (itemId: string) => {
+    const addToWishlist = useCallback((item: ProductType) => {
+        dispatch({ type: 'ADD_TO_WISHLIST', payload: item });
+        if (isAuthenticated()) {
+            wishlistApi.addItem(item.id).catch(() => { /* silent fail */ });
+        }
+    }, []);
+
+    const removeFromWishlist = useCallback((itemId: string) => {
         dispatch({ type: 'REMOVE_FROM_WISHLIST', payload: itemId });
-    };
+        if (isAuthenticated()) {
+            wishlistApi.removeItem(itemId).catch(() => { /* silent fail */ });
+        }
+    }, []);
 
     return (
         <WishlistContext.Provider value={{ wishlistState, addToWishlist, removeFromWishlist }}>

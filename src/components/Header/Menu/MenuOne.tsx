@@ -6,14 +6,16 @@ import Link from 'next/link'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
 import { usePathname } from 'next/navigation';
 import Product from '@/components/Product/Product';
-import productData from '@/data/Product.json'
 import useLoginPopup from '@/store/useLoginPopup';
 import useMenuMobile from '@/store/useMenuMobile';
 import { useModalCartContext } from '@/context/ModalCartContext';
 import { useModalWishlistContext } from '@/context/ModalWishlistContext';
 import { useModalSearchContext } from '@/context/ModalSearchContext';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useProducts } from '@/context/ProductsContext'
+import { useCMS } from '@/context/CMSContext'
 
 interface Props {
     props: string;
@@ -28,6 +30,7 @@ const MenuOne: React.FC<Props> = ({ props }) => {
     const [openSubNavMobile, setOpenSubNavMobile] = useState<number | null>(null)
     const { openModalCart } = useModalCartContext()
     const { cartState } = useCart()
+    const { user, logout } = useAuth()
     const { openModalWishlist } = useModalWishlistContext()
     const { openModalSearch } = useModalSearchContext()
 
@@ -67,6 +70,9 @@ const MenuOne: React.FC<Props> = ({ props }) => {
         router.push(`/shop/breadcrumb1?type=${type}`);
     };
 
+    const { products } = useProducts()
+    const { primaryMenu, global } = useCMS()
+
     return (
         <>
             <div className={`header-menu style-one ${fixedHeader ? 'fixed' : 'absolute'} top-0 left-0 right-0 w-full md:h-[74px] h-[56px] ${props}`}>
@@ -77,7 +83,10 @@ const MenuOne: React.FC<Props> = ({ props }) => {
                         </div>
                         <div className="left flex items-center gap-16">
                             <Link href={'/'} className='flex items-center max-lg:absolute max-lg:left-1/2 max-lg:-translate-x-1/2'>
-                                <div className="heading4">Anvogue</div>
+                                {global.logo_image
+                                    ? <img src={global.logo_image} alt={global.logo_text || 'Anvogue'} className="h-8 w-auto" />
+                                    : <div className="heading4">{global.logo_text || 'Anvogue'}</div>
+                                }
                             </Link>
                             <div className="menu-main h-full max-lg:hidden">
                                 <ul className='flex items-center gap-8 h-full'>
@@ -788,7 +797,7 @@ const MenuOne: React.FC<Props> = ({ props }) => {
                                                     <div className="recent-product pl-2.5 basis-1/3">
                                                         <div className="text-button-uppercase pb-2">Recent Products</div>
                                                         <div className="list-product hide-product-sold  grid grid-cols-2 gap-5 mt-3">
-                                                            {productData.filter(item => item.action === 'add to cart').slice(0, 2).map((prd, index) => (
+                                                            {products.filter(item => item.action === 'add to cart').slice(0, 2).map((prd, index) => (
                                                                 <Product key={index} data={prd} type='grid' style='style-1' />
                                                             ))}
                                                         </div>
@@ -1093,6 +1102,32 @@ const MenuOne: React.FC<Props> = ({ props }) => {
                                             </ul>
                                         </div>
                                     </li>
+                                    {/* CMS-managed nav items */}
+                                    {primaryMenu.map(item => (
+                                        <li key={item.id} className='h-full relative'>
+                                            <Link
+                                                href={item.url}
+                                                target={item.target}
+                                                className={`text-button-uppercase duration-300 h-full flex items-center justify-center gap-1 ${pathname === item.url ? 'active' : ''}`}
+                                            >
+                                                {item.label}
+                                            </Link>
+                                            {item.children.length > 0 && (
+                                                <div className="sub-menu py-3 px-5 -left-4 w-max absolute bg-white rounded-b-xl">
+                                                    <ul>
+                                                        {item.children.map(child => (
+                                                            <li key={child.id}>
+                                                                <Link href={child.url} target={child.target}
+                                                                    className="link text-secondary duration-300">
+                                                                    {child.label}
+                                                                </Link>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </li>
+                                    ))}
                                 </ul>
                             </div>
                         </div>
@@ -1108,11 +1143,28 @@ const MenuOne: React.FC<Props> = ({ props }) => {
                                         className={`login-popup absolute top-[74px] w-[320px] p-7 rounded-xl bg-white box-shadow-sm 
                                             ${openLoginPopup ? 'open' : ''}`}
                                     >
-                                        <Link href={'/login'} className="button-main w-full text-center">Login</Link>
-                                        <div className="text-secondary text-center mt-3 pb-4">Don’t have an account?
-                                            <Link href={'/register'} className='text-black pl-1 hover:underline'>Register</Link>
-                                        </div>
-                                        <Link href={'/my-account'} className="button-main bg-white text-black border border-black w-full text-center">Dashboard</Link>
+                                        {user ? (
+                                            <>
+                                                <div className="text-secondary text-sm mb-3">
+                                                    Signed in as <span className="text-black font-medium">{user.firstName ? `${user.firstName} ${user.lastName}` : user.email}</span>
+                                                </div>
+                                                <Link href={'/my-account'} className="button-main w-full text-center" onClick={handleLoginPopup}>My Account</Link>
+                                                <button
+                                                    className="button-main bg-white text-black border border-black w-full text-center mt-3"
+                                                    onClick={() => { handleLoginPopup(); logout(); }}
+                                                >
+                                                    Logout
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Link href={'/login'} className="button-main w-full text-center">Login</Link>
+                                                <div className="text-secondary text-center mt-3 pb-4">Don’t have an account?
+                                                    <Link href={'/register'} className='text-black pl-1 hover:underline'>Register</Link>
+                                                </div>
+                                                <Link href={'/my-account'} className="button-main bg-white text-black border border-black w-full text-center">Dashboard</Link>
+                                            </>
+                                        )}
                                         <div className="bottom mt-4 pt-4 border-t border-line"></div>
                                         <Link href={'#!'} className='body1 hover:underline'>Support</Link>
                                     </div>
@@ -1141,7 +1193,9 @@ const MenuOne: React.FC<Props> = ({ props }) => {
                                 >
                                     <Icon.X size={14} />
                                 </div>
-                                <Link href={'/'} className='logo text-3xl font-semibold text-center'>Anvogue</Link>
+                                <Link href={'/'} className='logo text-3xl font-semibold text-center'>
+                                    {global.logo_text || 'Anvogue'}
+                                </Link>
                             </div>
                             <div className="form-search relative mt-2">
                                 <Icon.MagnifyingGlass size={20} className='absolute left-3 top-1/2 -translate-y-1/2 cursor-pointer' />
@@ -1836,7 +1890,7 @@ const MenuOne: React.FC<Props> = ({ props }) => {
                                                     <div className="recent-product pt-3">
                                                         <div className="text-button-uppercase pb-1">Recent Products</div>
                                                         <div className="list-product hide-product-sold  grid grid-cols-2 gap-5 mt-3">
-                                                            {productData.slice(0, 2).map((prd, index) => (
+                                                            {products.slice(0, 2).map((prd, index) => (
                                                                 <Product key={index} data={prd} type='grid' style='style-1' />
                                                             ))}
                                                         </div>
@@ -2028,7 +2082,7 @@ const MenuOne: React.FC<Props> = ({ props }) => {
                                                     <div className="recent-product pt-4">
                                                         <div className="text-button-uppercase pb-1">Recent Products</div>
                                                         <div className="list-product hide-product-sold  grid grid-cols-2 gap-5 mt-3">
-                                                            {productData.slice(0, 2).map((prd, index) => (
+                                                            {products.slice(0, 2).map((prd, index) => (
                                                                 <Product key={index} data={prd} type='grid' style='style-1' />
                                                             ))}
                                                         </div>

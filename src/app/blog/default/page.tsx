@@ -1,11 +1,11 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import TopNavOne from '@/components/Header/TopNav/TopNavOne'
 import MenuOne from '@/components/Header/Menu/MenuOne'
 import Breadcrumb from '@/components/Breadcrumb/Breadcrumb';
-import blogData from '@/data/Blog.json'
+import { blogApi, BlogPost } from '@/lib/api'
 import BlogItem from '@/components/Blog/BlogItem';
 import Footer from '@/components/Footer/Footer'
 import HandlePagination from '@/components/Other/HandlePagination'
@@ -13,6 +13,14 @@ import { useRouter } from 'next/navigation'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
 
 const BlogDefault = () => {
+    const [blogData, setBlogData] = useState<BlogPost[]>([])
+
+    useEffect(() => {
+        blogApi.getAll({ limit: '100' })
+            .then(({ data }) => setBlogData(data as BlogPost[]))
+            .catch(() => setBlogData([]))
+    }, [])
+
     const [currentPage, setCurrentPage] = useState(0);
     const productsPerPage = 3;
     const offset = currentPage * productsPerPage;
@@ -108,10 +116,10 @@ const BlogDefault = () => {
                                     {blogData.slice(12, 15).map(item => (
                                         <div className="item flex gap-4 mt-5 cursor-pointer" key={item.id} onClick={() => handleBlogClick(item.id)}>
                                             <Image
-                                                src={item.thumbImg}
+                                                src={item.thumbImg ?? ""}
                                                 width={500}
                                                 height={400}
-                                                alt={item.thumbImg}
+                                                alt={item.thumbImg ?? ""}
                                                 className='w-20 h-20 object-cover rounded-lg flex-shrink-0'
                                             />
                                             <div>

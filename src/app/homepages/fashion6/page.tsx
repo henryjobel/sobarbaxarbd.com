@@ -1,10 +1,11 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import TopNavThree from '@/components/Header/TopNav/TopNavThree'
 import MenuFour from '@/components/Header/Menu/MenuFour'
 import BannerTop from '@/components/Home4/BannerTop'
 import SliderSix from '@/components/Slider/SliderSix'
 import Collection from '@/components/Home6/Collection'
-import productData from '@/data/Product.json'
 import TabFeatures from '@/components/Home2/TabFeatures'
 import PopularProduct from '@/components/Home6/PopularProduct'
 import FlashSale from '@/components/Home6/FlashSale'
@@ -16,8 +17,17 @@ import Instagram from '@/components/Home6/Instagram'
 import Brand from '@/components/Home6/Brand'
 import Footer from '@/components/Footer/Footer'
 import ModalNewsletter from '@/components/Modal/ModalNewsletter'
+import { productsApi, normalizeApiProduct } from '@/lib/api'
+import { ProductType } from '@/type/ProductType'
 
 export default function HomeSix() {
+    const [products, setProducts] = useState<ProductType[]>([])
+
+    useEffect(() => {
+        productsApi.getAll({ limit: '200' })
+            .then(res => setProducts(res.products.map(normalizeApiProduct)))
+            .catch(() => setProducts([]))
+    }, [])
     return (
         <>
             <TopNavThree props="style-three bg-white" />
@@ -27,11 +37,11 @@ export default function HomeSix() {
                 <SliderSix />
             </div>
             <Collection />
-            <TabFeatures data={productData} start={0} limit={8} />
+            <TabFeatures data={products} start={0} limit={8} />
             <PopularProduct />
             <FlashSale />
             <Testimonial data={testimonialData} limit={5} />
-            <BestSaleProduct data={productData} />
+            <BestSaleProduct data={products} />
             <Benefit props="md:pt-20 pt-10" />
             <Instagram />
             <Brand />

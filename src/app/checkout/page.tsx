@@ -2,30 +2,100 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import TopNavOne from '@/components/Header/TopNav/TopNavOne'
 import MenuOne from '@/components/Header/Menu/MenuOne'
 import Breadcrumb from '@/components/Breadcrumb/Breadcrumb'
 import Footer from '@/components/Footer/Footer'
-import { ProductType } from '@/type/ProductType'
-import productData from '@/data/Product.json'
-import Product from '@/components/Product/Product'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
 import { useCart } from '@/context/CartContext'
-import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext'
+import { ordersApi, couponsApi } from '@/lib/api'
+import { useSearchParams } from 'next/navigation'
 
 const Checkout = () => {
+    const router = useRouter()
     const searchParams = useSearchParams()
-    let discount = searchParams.get('discount')
-    let ship = searchParams.get('ship')
+    const discountParam = Number(searchParams.get('discount') || 0)
+    const shipParam = Number(searchParams.get('ship') || 0)
 
-    const { cartState } = useCart();
-    let [totalCart, setTotalCart] = useState<number>(0)
+    const { cartState, clearCart } = useCart()
+    const { user } = useAuth()
     const [activePayment, setActivePayment] = useState<string>('credit-card')
 
-    cartState.cartArray.map(item => totalCart += item.price * item.quantity)
+    // Form state
+    const [firstName, setFirstName] = useState(user?.firstName ?? '')
+    const [lastName, setLastName] = useState(user?.lastName ?? '')
+    const [email, setEmail] = useState(user?.email ?? '')
+    const [phone, setPhone] = useState(user?.phone ?? '')
+    const [country, setCountry] = useState('')
+    const [city, setCity] = useState('')
+    const [street, setStreet] = useState('')
+    const [postalCode, setPostalCode] = useState('')
+    const [note, setNote] = useState('')
+    const [couponCode, setCouponCode] = useState('')
+    const [couponDiscount, setCouponDiscount] = useState(0)
+    const [couponError, setCouponError] = useState('')
 
-    const handlePayment = (item: string) => {
-        setActivePayment(item)
+    // Submit state
+    const [submitting, setSubmitting] = useState(false)
+    const [submitError, setSubmitError] = useState('')
+
+    const totalCart = cartState.cartArray.reduce((acc, item) => acc + item.price * item.quantity, 0)
+    const totalWithShipping = totalCart - couponDiscount - discountParam + shipParam
+
+    const handlePayment = (item: string) => setActivePayment(item)
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) return
+        setCouponError('')
+        try {
+            const result = await couponsApi.validate(couponCode.trim(), totalCart)
+            setCouponDiscount(result.discount)
+        } catch (err: unknown) {
+            setCouponError(err instanceof Error ? err.message : 'Invalid coupon')
+            setCouponDiscount(0)
+        }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (cartState.cartArray.length === 0) {
+            setSubmitError('Your cart is empty.')
+            return
+        }
+        setSubmitting(true)
+        setSubmitError('')
+        try {
+            const items = cartState.cartArray.map(item => ({
+                productId: item.id,
+                quantity: item.quantity,
+                price: item.price,
+                selectedSize: item.selectedSize || undefined,
+                selectedColor: item.selectedColor || undefined,
+            }))
+            const order = await ordersApi.create({
+                items,
+                firstName,
+                lastName,
+                email,
+                phone,
+                country,
+                city,
+                street,
+                postalCode,
+                note,
+                couponCode: couponCode || undefined,
+                shipping: shipParam,
+                paymentMethod: activePayment,
+            })
+            clearCart()
+            router.push(`/my-account?tab=orders&orderId=${order.id}`)
+        } catch (err: unknown) {
+            setSubmitError(err instanceof Error ? err.message : 'Failed to place order.')
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     return (
@@ -39,72 +109,71 @@ const Checkout = () => {
                 <div className="container">
                     <div className="content-main flex justify-between">
                         <div className="left w-1/2">
-                            <div className="login bg-surface py-3 px-4 flex justify-between rounded-lg">
-                                <div className="left flex items-center"><span className="text-on-surface-variant1 pr-4">Already have an account? </span><span className="text-button text-on-surface hover-underline cursor-pointer">Login</span></div>
-                                <div className="right"><i className="ph ph-caret-down fs-20 d-block cursor-pointer"></i></div>
-                            </div>
-                            <div className="form-login-block mt-3">
-                                <form className="p-5 border border-line rounded-lg">
-                                    <div className="grid sm:grid-cols-2 gap-5">
-                                        <div className="email ">
-                                            <input className="border-line px-4 pt-3 pb-3 w-full rounded-lg" id="username" type="email" placeholder="Username or email" required />
-                                        </div>
-                                        <div className="pass ">
-                                            <input className="border-line px-4 pt-3 pb-3 w-full rounded-lg" id="password" type="password" placeholder="Password" required />
-                                        </div>
+                            {user ? (
+                                <div className="login bg-surface py-3 px-4 flex items-center gap-3 rounded-lg">
+                                    <Icon.CheckCircle size={20} className="text-green-600" weight="fill" />
+                                    <span className="text-on-surface-variant1">Logged in as </span>
+                                    <span className="text-button text-on-surface">{user.email}</span>
+                                </div>
+                            ) : (
+                                <div className="login bg-surface py-3 px-4 flex items-center justify-between rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-on-surface-variant1">Already have an account?</span>
+                                        <Link href="/login" className="text-button text-on-surface hover-underline">Login</Link>
                                     </div>
-                                    <div className="block-button mt-3">
-                                        <button className="button-main button-blue-hover">Login</button>
-                                    </div>
-                                </form>
-                            </div>
+                                    <Icon.CaretRight size={18} />
+                                </div>
+                            )}
                             <div className="information mt-5">
                                 <div className="heading5">Information</div>
+                                {submitError && (
+                                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mt-3 text-sm">{submitError}</div>
+                                )}
                                 <div className="form-checkout mt-5">
-                                    <form>
+                                    <form onSubmit={handleSubmit}>
                                         <div className="grid sm:grid-cols-2 gap-4 gap-y-5 flex-wrap">
                                             <div className="">
-                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="firstName" type="text" placeholder="First Name *" required />
+                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="firstName" type="text" placeholder="First Name *" required value={firstName} onChange={e => setFirstName(e.target.value)} />
                                             </div>
                                             <div className="">
-                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="lastName" type="text" placeholder="Last Name *" required />
+                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="lastName" type="text" placeholder="Last Name *" required value={lastName} onChange={e => setLastName(e.target.value)} />
                                             </div>
                                             <div className="">
-                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="email" type="email" placeholder="Email Address *" required />
+                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="email" type="email" placeholder="Email Address *" required value={email} onChange={e => setEmail(e.target.value)} />
                                             </div>
                                             <div className="">
-                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="phoneNumber" type="number" placeholder="Phone Numbers *" required />
+                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="phoneNumber" type="text" placeholder="Phone Numbers *" required value={phone} onChange={e => setPhone(e.target.value)} />
                                             </div>
                                             <div className="col-span-full select-block">
-                                                <select className="border border-line px-4 py-3 w-full rounded-lg" id="region" name="region" defaultValue={'default'}>
-                                                    <option value="default" disabled>Choose Country/Region</option>
-                                                    <option value="India">India</option>
-                                                    <option value="France">France</option>
-                                                    <option value="Singapore">Singapore</option>
+                                                <select className="border border-line px-4 py-3 w-full rounded-lg" id="region" name="region" value={country} onChange={e => setCountry(e.target.value)} required>
+                                                    <option value="" disabled>Choose Country/Region</option>
+                                                    <option value="US">United States</option>
+                                                    <option value="UK">United Kingdom</option>
+                                                    <option value="IN">India</option>
+                                                    <option value="FR">France</option>
+                                                    <option value="SG">Singapore</option>
+                                                    <option value="BD">Bangladesh</option>
                                                 </select>
                                                 <Icon.CaretDown className='arrow-down' />
                                             </div>
                                             <div className="">
-                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="city" type="text" placeholder="Town/City *" required />
+                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="city" type="text" placeholder="Town/City *" required value={city} onChange={e => setCity(e.target.value)} />
                                             </div>
                                             <div className="">
-                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="apartment" type="text" placeholder="Street,..." required />
-                                            </div>
-                                            <div className="select-block">
-                                                <select className="border border-line px-4 py-3 w-full rounded-lg" id="country" name="country" defaultValue={'default'}>
-                                                    <option value="default" disabled>Choose State</option>
-                                                    <option value="India">India</option>
-                                                    <option value="France">France</option>
-                                                    <option value="Singapore">Singapore</option>
-                                                </select>
-                                                <Icon.CaretDown className='arrow-down' />
+                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="apartment" type="text" placeholder="Street,..." required value={street} onChange={e => setStreet(e.target.value)} />
                                             </div>
                                             <div className="">
-                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="postal" type="text" placeholder="Postal Code *" required />
+                                                <input className="border-line px-4 py-3 w-full rounded-lg" id="postal" type="text" placeholder="Postal Code *" required value={postalCode} onChange={e => setPostalCode(e.target.value)} />
                                             </div>
                                             <div className="col-span-full">
-                                                <textarea className="border border-line px-4 py-3 w-full rounded-lg" id="note" name="note" placeholder="Write note..."></textarea>
+                                                <textarea className="border border-line px-4 py-3 w-full rounded-lg" id="note" name="note" placeholder="Write note..." value={note} onChange={e => setNote(e.target.value)}></textarea>
                                             </div>
+                                            <div className="col-span-full flex gap-3">
+                                                <input className="border-line px-4 py-3 flex-1 rounded-lg" type="text" placeholder="Coupon code" value={couponCode} onChange={e => { setCouponCode(e.target.value); setCouponError('') }} />
+                                                <button type="button" className="button-main px-6" onClick={handleApplyCoupon}>Apply</button>
+                                            </div>
+                                            {couponError && <p className="col-span-full text-red-500 text-sm mt-1">{couponError}</p>}
+                                            {couponDiscount > 0 && <p className="col-span-full text-green-600 text-sm mt-1">Coupon applied: -${couponDiscount.toFixed(2)}</p>}
                                         </div>
                                         <div className="payment-block md:mt-10 mt-6">
                                             <div className="heading5">Choose payment Option:</div>
@@ -214,7 +283,9 @@ const Checkout = () => {
                                             </div>
                                         </div>
                                         <div className="block-button md:mt-10 mt-6">
-                                            <button className="button-main w-full">Payment</button>
+                                            <button type="submit" className="button-main w-full" disabled={submitting}>
+                                                {submitting ? 'Placing Order...' : 'Place Order'}
+                                            </button>
                                         </div>
                                     </form>
                                 </div>
@@ -264,15 +335,15 @@ const Checkout = () => {
                                 </div>
                                 <div className="discount-block py-5 flex justify-between border-b border-line">
                                     <div className="text-title">Discounts</div>
-                                    <div className="text-title">-$<span className="discount">{discount}</span><span>.00</span></div>
+                                    <div className="text-title">-${(couponDiscount + discountParam).toFixed(2)}</div>
                                 </div>
                                 <div className="ship-block py-5 flex justify-between border-b border-line">
                                     <div className="text-title">Shipping</div>
-                                    <div className="text-title">{Number(ship) === 0 ? 'Free' : `$${ship}.00`}</div>
+                                    <div className="text-title">{shipParam === 0 ? 'Free' : `$${shipParam.toFixed(2)}`}</div>
                                 </div>
                                 <div className="total-cart-block pt-5 flex justify-between">
                                     <div className="heading5">Total</div>
-                                    <div className="heading5 total-cart">${totalCart - Number(discount) + Number(ship)}.00</div>
+                                    <div className="heading5 total-cart">${totalWithShipping.toFixed(2)}</div>
                                 </div>
                             </div>
                         </div>

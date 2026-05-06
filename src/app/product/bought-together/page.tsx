@@ -1,19 +1,41 @@
 'use client'
-import React from 'react'
-import { useSearchParams } from 'next/navigation';
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import TopNavOne from '@/components/Header/TopNav/TopNavOne'
 import MenuOne from '@/components/Header/Menu/MenuOne'
 import BreadcrumbProduct from '@/components/Breadcrumb/BreadcrumbProduct'
-import BoughtTogether from '@/components/Product/Detail/BoughtTogether';
+import BoughtTogether from '@/components/Product/Detail/BoughtTogether'
 import Footer from '@/components/Footer/Footer'
-import productData from '@/data/Product.json'
+import { productsApi, normalizeApiProduct } from '@/lib/api'
+import { ProductType } from '@/type/ProductType'
 
 const ProductBoughtTogether = () => {
     const searchParams = useSearchParams()
-    let productId = searchParams.get('id')
+    const productId = searchParams.get('id') ?? ''
 
-    if (productId === null) {
-        productId = '1'
+    const [products, setProducts] = useState<ProductType[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        productsApi.getAll({ limit: '200' })
+            .then(res => setProducts(res.products.map(normalizeApiProduct)))
+            .catch(() => setProducts([]))
+            .finally(() => setLoading(false))
+    }, [])
+
+    if (loading) {
+        return (
+            <>
+                <TopNavOne props="style-one bg-black" slogan="New customers save 10% with the code GET10" />
+                <div id="header" className='relative w-full'>
+                    <MenuOne props="bg-white" />
+                </div>
+                <div className="flex justify-center items-center py-40">
+                    <div className="text-secondary text-lg">Loading products...</div>
+                </div>
+                <Footer />
+            </>
+        )
     }
 
     return (
@@ -21,9 +43,9 @@ const ProductBoughtTogether = () => {
             <TopNavOne props="style-one bg-black" slogan="New customers save 10% with the code GET10" />
             <div id="header" className='relative w-full'>
                 <MenuOne props="bg-white" />
-                <BreadcrumbProduct data={productData} productPage='bought-together' productId={productId} />
+                <BreadcrumbProduct data={products} productPage='bought-together' productId={productId} />
             </div>
-            <BoughtTogether data={productData} productId={productId} />
+            <BoughtTogether data={products} productId={productId} />
             <Footer />
         </>
     )

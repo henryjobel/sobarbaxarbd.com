@@ -121,6 +121,37 @@ const OutOfStock: React.FC<Props> = ({ data, productId }) => {
         setActiveTab(tab)
     }
 
+    const [reviewName, setReviewName] = useState('')
+    const [reviewEmail, setReviewEmail] = useState('')
+    const [reviewContent, setReviewContent] = useState('')
+    const [reviewRating, setReviewRating] = useState(5)
+    const [reviewLoading, setReviewLoading] = useState(false)
+    const [reviewSuccess, setReviewSuccess] = useState(false)
+    const [reviewError, setReviewError] = useState('')
+
+    const handleReviewSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setReviewLoading(true)
+        setReviewError('')
+        setReviewSuccess(false)
+        try {
+            const token = localStorage.getItem('access_token')
+            const res = await fetch('/api/v1/reviews', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({ productId: productMain.id, rating: reviewRating, content: reviewContent }),
+            })
+            if (!res.ok) throw new Error('Failed to submit review')
+            setReviewSuccess(true)
+            setReviewContent('')
+            setReviewRating(5)
+        } catch {
+            setReviewError('Failed to submit review. Please try again.')
+        } finally {
+            setReviewLoading(false)
+        }
+    }
+
     return (
         <>
             <div className="product-detail grouped out-of-stock">
@@ -842,7 +873,7 @@ const OutOfStock: React.FC<Props> = ({ data, productId }) => {
                     <div className="container">
                         <div className="heading3 text-center">Related Products</div>
                         <div className="list-product hide-product-sold  grid lg:grid-cols-4 grid-cols-2 md:gap-[30px] gap-5 md:mt-10 mt-6">
-                            {data.slice(Number(productId), Number(productId) + 4).map((item, index) => (
+                            {data.filter(p => p.id !== productMain.id).slice(0, 4).map((item, index) => (
                                 <Product key={index} data={item} type='grid' style='style-1' />
                             ))}
                         </div>

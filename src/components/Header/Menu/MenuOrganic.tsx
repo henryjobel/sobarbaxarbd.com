@@ -7,13 +7,13 @@ import { useRouter } from 'next/navigation'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
 import { usePathname } from 'next/navigation';
 import Product from '@/components/Product/Product';
-import productData from '@/data/Product.json'
 import useLoginPopup from '@/store/useLoginPopup';
 import useShopDepartmentPopup from '@/store/useShopDepartmentPopup';
 import useMenuMobile from '@/store/useMenuMobile';
 import { useModalCartContext } from '@/context/ModalCartContext';
 import { useModalWishlistContext } from '@/context/ModalWishlistContext';
 import { useCart } from '@/context/CartContext';
+import { useProducts } from '@/context/ProductsContext'
 
 const MenuOrganic = () => {
     const pathname = usePathname()
@@ -67,6 +67,8 @@ const MenuOrganic = () => {
     const handleTypeClick = (type: string) => {
         router.push(`/shop/breadcrumb1?type=${type}`);
     };
+
+    const { products } = useProducts()
 
     return (
         <>
@@ -744,7 +746,7 @@ const MenuOrganic = () => {
                                                         <div className="recent-product pl-2.5 basis-1/3">
                                                             <div className="text-button-uppercase pb-2">Recent Products</div>
                                                             <div className="list-product hide-product-sold  grid grid-cols-2 gap-5 mt-3">
-                                                                {productData.filter(item => item.action === 'add to cart' && item.category === 'organic').slice(0, 2).map((prd, index) => (
+                                                                {products.filter(item => item.action === 'add to cart' && item.category === 'organic').slice(0, 2).map((prd, index) => (
                                                                     <Product key={index} data={prd} type='grid' style='style-1' />
                                                                 ))}
                                                             </div>
@@ -924,7 +926,7 @@ const MenuOrganic = () => {
                                                         <div className="recent-product pl-2.5 basis-1/3">
                                                             <div className="text-button-uppercase pb-2">Recent Products</div>
                                                             <div className="list-product hide-product-sold  grid grid-cols-2 gap-5 mt-3">
-                                                                {productData.filter(item => item.action === 'add to cart' && item.category === 'organic').slice(0, 2).map((prd, index) => (
+                                                                {products.filter(item => item.action === 'add to cart' && item.category === 'organic').slice(0, 2).map((prd, index) => (
                                                                     <Product key={index} data={prd} type='grid' style='style-1' />
                                                                 ))}
                                                             </div>
@@ -1608,7 +1610,7 @@ const MenuOrganic = () => {
                                                     <div className="recent-product pt-3">
                                                         <div className="text-button-uppercase pb-1">Recent Products</div>
                                                         <div className="list-product hide-product-sold  grid grid-cols-2 gap-5 mt-3">
-                                                            {productData.filter(item => item.action === 'add to cart' && item.category === 'organic').slice(0, 2).map((prd, index) => (
+                                                            {products.filter(item => item.action === 'add to cart' && item.category === 'organic').slice(0, 2).map((prd, index) => (
                                                                 <Product key={index} data={prd} type='grid' style='style-1' />
                                                             ))}
                                                         </div>
@@ -1800,7 +1802,7 @@ const MenuOrganic = () => {
                                                     <div className="recent-product pt-4">
                                                         <div className="text-button-uppercase pb-1">Recent Products</div>
                                                         <div className="list-product hide-product-sold  grid grid-cols-2 gap-5 mt-3">
-                                                            {productData.filter(item => item.action === 'add to cart' && item.category === 'organic').slice(0, 2).map((prd, index) => (
+                                                            {products.filter(item => item.action === 'add to cart' && item.category === 'organic').slice(0, 2).map((prd, index) => (
                                                                 <Product key={index} data={prd} type='grid' style='style-1' />
                                                             ))}
                                                         </div>

@@ -3,9 +3,9 @@
 import { useRouter } from 'next/navigation'
 import React, { useState, useEffect } from 'react'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
-import productData from '@/data/Product.json'
 import { useModalQuickviewContext } from '@/context/ModalQuickviewContext';
 import Image from 'next/image';
+import { useProducts } from '@/context/ProductsContext'
 
 const ModalNewsletter = () => {
     const [open, setOpen] = useState<boolean>(false)
@@ -22,6 +22,8 @@ const ModalNewsletter = () => {
             setOpen(true)
         }, 3000)
     }, [])
+
+    const { products } = useProducts()
 
     return (
         <div className="modal-newsletter" onClick={() => setOpen(false)}>
@@ -51,7 +53,7 @@ const ModalNewsletter = () => {
                             </div>
                             <div className="heading5 pb-5">You May Also Like</div>
                             <div className="list flex flex-col gap-5 overflow-x-auto sm:pr-6">
-                                {productData.slice(11, 16).map((item, index) => (
+                                {products.slice(11, 16).map((item, index) => (
                                     <>
                                         <div
                                             className='product-item item pb-5 flex items-center justify-between gap-3 border-b border-line'

@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link';
 import Image from 'next/image';
 import * as Icon from "@phosphor-icons/react/dist/ssr";
+import { useCMS } from '@/context/CMSContext';
 
 interface Props {
     props: string;
@@ -15,6 +16,14 @@ const TopNavOne: React.FC<Props> = ({ props, slogan }) => {
     const [isOpenCurrence, setIsOpenCurrence] = useState(false)
     const [language, setLanguage] = useState('English')
     const [currence, setCurrence] = useState('USD')
+    const { global } = useCMS()
+
+    const announcementText = global.announcement_text || slogan
+    const announcementLink = global.announcement_link || '#!'
+    const fb = global.footer_facebook || 'https://www.facebook.com/'
+    const ig = global.footer_instagram || 'https://www.instagram.com/'
+    const yt = global.footer_youtube || 'https://www.youtube.com/'
+    const tw = global.footer_twitter || 'https://twitter.com/'
 
     return (
         <>
@@ -62,23 +71,20 @@ const TopNavOne: React.FC<Props> = ({ props, slogan }) => {
                             </div>
                         </div>
                         <div className="text-center text-button-uppercase text-white flex items-center">
-                            {slogan}
+                            <Link href={announcementLink}>{announcementText}</Link>
                         </div>
                         <div className="right-content flex items-center gap-5 max-md:hidden">
-                            <Link href={'https://www.facebook.com/'} target='_blank'>
+                            <Link href={fb} target='_blank'>
                                 <i className="icon-facebook text-white"></i>
                             </Link>
-                            <Link href={'https://www.instagram.com/'} target='_blank'>
+                            <Link href={ig} target='_blank'>
                                 <i className="icon-instagram text-white"></i>
                             </Link>
-                            <Link href={'https://www.youtube.com/'} target='_blank'>
+                            <Link href={yt} target='_blank'>
                                 <i className="icon-youtube text-white"></i>
                             </Link>
-                            <Link href={'https://twitter.com/'} target='_blank'>
+                            <Link href={tw} target='_blank'>
                                 <i className="icon-twitter text-white"></i>
-                            </Link>
-                            <Link href={'https://pinterest.com/'} target='_blank'>
-                                <i className="icon-pinterest text-white"></i>
                             </Link>
                         </div>
 

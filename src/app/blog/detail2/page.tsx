@@ -1,18 +1,26 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation'
 import TopNavOne from '@/components/Header/TopNav/TopNavOne'
 import MenuOne from '@/components/Header/Menu/MenuOne'
-import blogData from '@/data/Blog.json'
+import { blogApi, BlogPost } from '@/lib/api'
 import NewsInsight from '@/components/Home3/NewsInsight';
 import Footer from '@/components/Footer/Footer'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
 import Rate from '@/components/Other/Rate';
 
 const BlogDetailTwo = () => {
+    const [blogData, setBlogData] = useState<BlogPost[]>([])
+
+    useEffect(() => {
+        blogApi.getAll({ limit: '100' })
+            .then(({ data }) => setBlogData(data as BlogPost[]))
+            .catch(() => setBlogData([]))
+    }, [])
+
     const searchParams = useSearchParams()
     const router = useRouter()
 
@@ -21,7 +29,7 @@ const BlogDetailTwo = () => {
         blogId = '14'
     }
 
-    const blogMain = blogData[Number(blogId) - 1]
+    const blogMain = blogData.find(b => b.id === blogId) ?? blogData[0]
 
     const handleBlogClick = (category: string) => {
         // Go to blog detail with category selected
@@ -48,7 +56,7 @@ const BlogDetailTwo = () => {
                             <div className="author flex items-center gap-4 mt-4">
                                 <div className="avatar w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                                     <Image
-                                        src={blogMain.avatar}
+                                        src={blogMain.avatar ?? ""}
                                         width={200}
                                         height={200}
                                         alt='avatar'
@@ -63,10 +71,10 @@ const BlogDetailTwo = () => {
                             </div>
                             <div className="bg-img md:py-10 py-6">
                                 <Image
-                                    src={blogMain.thumbImg}
+                                    src={blogMain.thumbImg ?? ""}
                                     width={5000}
                                     height={4000}
-                                    alt={blogMain.thumbImg}
+                                    alt={blogMain.thumbImg ?? ""}
                                     className='w-full object-cover rounded-3xl'
                                 />
                             </div>
@@ -376,7 +384,7 @@ const BlogDetailTwo = () => {
                                 <div className="heading flex gap-5">
                                     <div className="avatar w-[100px] h-[100px] rounded-full overflow-hidden flex-shrink-0">
                                         <Image
-                                            src={blogMain.avatar}
+                                            src={blogMain.avatar ?? ""}
                                             width={500}
                                             height={500}
                                             alt='avatar'
@@ -415,10 +423,10 @@ const BlogDetailTwo = () => {
                                     {blogData.slice(12, 15).map(item => (
                                         <div className="item flex gap-4 mt-5 cursor-pointer" key={item.id} onClick={() => handleBlogDetail(item.id)}>
                                             <Image
-                                                src={item.thumbImg}
+                                                src={item.thumbImg ?? ""}
                                                 width={500}
                                                 height={400}
-                                                alt={item.thumbImg}
+                                                alt={item.thumbImg ?? ""}
                                                 className='w-20 h-20 object-cover rounded-lg flex-shrink-0'
                                             />
                                             <div>

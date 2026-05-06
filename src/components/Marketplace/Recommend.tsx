@@ -1,8 +1,11 @@
+'use client'
 import React from 'react'
-import productData from '@/data/Product.json'
 import Product from '../Product/Product'
+import { useProducts } from '@/context/ProductsContext'
 
 const Recommend = () => {
+    const { products } = useProducts()
+
     return (
         <div className="recommend md:mt-[60px] mt-10">
             <div className="container">
@@ -13,7 +16,7 @@ const Recommend = () => {
                 </div>
                 <div
                     className="list grid xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 sm:gap-[30px] gap-[20px] md:mt-10 mt-6">
-                    {productData.slice(155, 160).map(item => (
+                    {products.slice(155, 160).map(item => (
                         <Product data={item} type='marketplace' key={item.id} />
                     ))}
                 </div>

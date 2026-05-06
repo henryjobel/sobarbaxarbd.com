@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import * as Icon from "@phosphor-icons/react/dist/ssr";
-import productData from '@/data/Product.json'
 import Product from '../Product/Product';
 import { useModalSearchContext } from '@/context/ModalSearchContext'
+import { useProducts } from '@/context/ProductsContext'
 
 const ModalSearch = () => {
     const { isModalOpen, closeModalSearch } = useModalSearchContext();
@@ -19,6 +19,8 @@ const ModalSearch = () => {
         closeModalSearch()
         setSearchKeyword('')
     }
+
+    const { products } = useProducts()
 
     return (
         <>
@@ -75,7 +77,7 @@ const ModalSearch = () => {
                     <div className="list-recent mt-8">
                         <div className="heading6">Recently viewed products</div>
                         <div className="list-product pb-5 hide-product-sold grid xl:grid-cols-4 sm:grid-cols-2 gap-7 mt-4">
-                            {productData.slice(0, 4).map((product) => (
+                            {products.slice(0, 4).map((product) => (
                                 <Product key={product.id} data={product} type='grid' />
                             ))}
                         </div>

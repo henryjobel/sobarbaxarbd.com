@@ -1,16 +1,24 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image';
 import TopNavOne from '@/components/Header/TopNav/TopNavOne'
 import MenuOne from '@/components/Header/Menu/MenuOne'
 import Breadcrumb from '@/components/Breadcrumb/Breadcrumb';
-import blogData from '@/data/Blog.json'
+import { blogApi, BlogPost } from '@/lib/api'
 import BlogItem from '@/components/Blog/BlogItem';
 import Footer from '@/components/Footer/Footer'
 import HandlePagination from '@/components/Other/HandlePagination'
 import { useRouter } from 'next/navigation'
 
 const BlogGrid = () => {
+    const [blogData, setBlogData] = useState<BlogPost[]>([])
+
+    useEffect(() => {
+        blogApi.getAll({ limit: '100' })
+            .then(({ data }) => setBlogData(data as BlogPost[]))
+            .catch(() => setBlogData([]))
+    }, [])
+
     const [currentPage, setCurrentPage] = useState(0);
     const productsPerPage = 9;
     const offset = currentPage * productsPerPage;

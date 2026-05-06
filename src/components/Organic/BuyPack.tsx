@@ -6,8 +6,8 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 import { useModalCartContext } from '@/context/ModalCartContext'
-import productData from '@/data/Product.json'
 import { ProductType } from '@/type/ProductType'
+import { useProducts } from '@/context/ProductsContext'
 
 const BuyPack = () => {
     const router = useRouter()
@@ -16,17 +16,17 @@ const BuyPack = () => {
 
     const handleAddToCart = () => {
         if (!cartState.cartArray.find(item => item.id === '123')) {
-            addToCart(productData.find(item => item.id === '123') as ProductType)
+            addToCart(products.find(item => item.id === '123') as ProductType)
             updateCart('123', 1, '', '')
         }
 
         if (!cartState.cartArray.find(item => item.id === '124')) {
-            addToCart(productData.find(item => item.id === '124') as ProductType)
+            addToCart(products.find(item => item.id === '124') as ProductType)
             updateCart('124', 1, '', '')
         }
 
         if (!cartState.cartArray.find(item => item.id === '125')) {
-            addToCart(productData.find(item => item.id === '125') as ProductType)
+            addToCart(products.find(item => item.id === '125') as ProductType)
             updateCart('125', 1, '', '')
         }
 
@@ -37,6 +37,8 @@ const BuyPack = () => {
         // redirect to shop with category selected
         router.push(`/product/default?id=${productId}`);
     };
+
+    const { products } = useProducts()
 
     return (
         <>

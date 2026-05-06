@@ -1,4 +1,6 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import TopNavThree from '@/components/Header/TopNav/TopNavThree'
 import MenuJewelry from '@/components/Header/Menu/MenuJewelry'
 import BannerTop from '@/components/Home3/BannerTop'
@@ -6,7 +8,6 @@ import SliderJewelry from '@/components/Slider/SliderJewelry'
 import Quote from '@/components/Jewelry/Quote'
 import Collection from '@/components/Jewelry/Collection'
 import Lookbook from '@/components/Jewelry/Lookbook'
-import productData from '@/data/Product.json'
 import TabFeatures from '@/components/Jewelry/TabFeatures'
 import FeaturedProduct from '@/components/Jewelry/FeaturedProduct'
 import Newsletter from '@/components/Home4/Newsletter'
@@ -15,8 +16,17 @@ import Instagram from '@/components/Jewelry/Instagram'
 import Brand from '@/components/Home1/Brand'
 import Footer from '@/components/Footer/Footer'
 import ModalNewsletter from '@/components/Modal/ModalNewsletter'
+import { productsApi, normalizeApiProduct } from '@/lib/api'
+import { ProductType } from '@/type/ProductType'
 
 export default function HomeJewelry() {
+    const [products, setProducts] = useState<ProductType[]>([])
+
+    useEffect(() => {
+        productsApi.getAll({ limit: '200' })
+            .then(res => setProducts(res.products.map(normalizeApiProduct)))
+            .catch(() => setProducts([]))
+    }, [])
     return (
         <>
             <TopNavThree props="style-three bg-white" />
@@ -28,8 +38,8 @@ export default function HomeJewelry() {
             <Quote />
             <Collection />
             <Lookbook />
-            <TabFeatures data={productData} start={0} limit={4} />
-            <FeaturedProduct data={productData} />
+            <TabFeatures data={products} start={0} limit={4} />
+            <FeaturedProduct data={products} />
             <Newsletter props="bg-transparent" />
             <Benefit props="py-[60px] bg-linear" />
             <Instagram />

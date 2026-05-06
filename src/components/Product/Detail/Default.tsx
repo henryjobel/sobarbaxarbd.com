@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ProductType } from '@/type/ProductType'
@@ -18,6 +18,7 @@ import { useModalWishlistContext } from '@/context/ModalWishlistContext'
 import { useCompare } from '@/context/CompareContext'
 import { useModalCompareContext } from '@/context/ModalCompareContext'
 import ModalSizeguide from '@/components/Modal/ModalSizeguide'
+import { reviewsApi, Review } from '@/lib/api'
 
 SwiperCore.use([Navigation, Thumbs]);
 
@@ -133,6 +134,42 @@ const Default: React.FC<Props> = ({ data, productId }) => {
         setActiveTab(tab)
     }
 
+
+    const [reviewComment, setReviewComment] = useState('')
+    const [reviewRating, setReviewRating] = useState(5)
+    const [reviewLoading, setReviewLoading] = useState(false)
+    const [reviewSuccess, setReviewSuccess] = useState(false)
+    const [reviewError, setReviewError] = useState('')
+    const [reviews, setReviews] = useState<Review[]>([])
+    const [reviewsTotal, setReviewsTotal] = useState(0)
+
+    useEffect(() => {
+        if (!productMain?.id) return
+        reviewsApi.getForProduct(productMain.id, 1, 5)
+            .then(res => { setReviews(res.reviews); setReviewsTotal(res.pagination.total) })
+            .catch(() => {})
+    }, [productMain?.id])
+
+    const handleReviewSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+        if (!token) { setReviewError('Please log in to submit a review.'); return }
+        setReviewLoading(true)
+        setReviewError('')
+        setReviewSuccess(false)
+        try {
+            const created = await reviewsApi.create({ productId: productMain.id, rating: reviewRating, comment: reviewComment })
+            setReviews(prev => [created, ...prev])
+            setReviewsTotal(t => t + 1)
+            setReviewSuccess(true)
+            setReviewComment('')
+            setReviewRating(5)
+        } catch (err: unknown) {
+            setReviewError(err instanceof Error ? err.message : 'Failed to submit review.')
+        } finally {
+            setReviewLoading(false)
+        }
+    }
 
     return (
         <>
@@ -666,7 +703,7 @@ const Default: React.FC<Props> = ({ data, productId }) => {
                                     <div className="text-display">4.6</div>
                                     <div className='flex flex-col items-center'>
                                         <Rate currentRate={5} size={18} />
-                                        <div className='text-secondary text-center mt-1'>(1,968 Ratings)</div>
+                                        <div className='text-secondary text-center mt-1'>({reviewsTotal} Ratings)</div>
                                     </div>
                                 </div>
                                 <div className="list-rating mt-3">
@@ -833,173 +870,59 @@ const Default: React.FC<Props> = ({ data, productId }) => {
                             </div>
                         </div>
                         <div className="list-review">
-                            <div className="item flex max-lg:flex-col gap-y-4 w-full py-6 border-t border-line">
-                                <div className="left lg:w-1/4 w-full lg:pr-[15px]">
-                                    <div className="list-img-review flex gap-2">
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                    </div>
-                                    <div className="user mt-3">
-                                        <div className="text-title">Tony Nguyen</div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-secondary2">1 days ago</div>
-                                            <div className="text-secondary2">-</div>
-                                            <div className="text-secondary2"><span>Yellow</span> / <span>XL</span></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="right lg:w-3/4 w-full lg:pl-[15px]">
-                                    <Rate currentRate={5} size={16} />
-                                    <div className="heading5 mt-3">Unbeatable Style and Quality: A Fashion Brand That Delivers</div>
-                                    <div className="body1 mt-3">I can{String.raw`'t`} get enough of the fashion pieces from this brand. They have a great selection for every occasion and the prices are reasonable. The shipping is fast and the items always arrive in perfect condition.</div>
-                                    <div className="action mt-3">
-                                        <div className="flex items-center gap-4">
-                                            <div className="like-btn flex items-center gap-1 cursor-pointer">
-                                                <Icon.HandsClapping size={18} />
-                                                <div className="text-button">20</div>
+                            {reviews.length === 0 ? (
+                                <div className="py-8 text-center text-secondary border-t border-line">No reviews yet. Be the first to write one!</div>
+                            ) : (
+                                reviews.map(review => (
+                                    <div key={review.id} className="item flex max-lg:flex-col gap-y-4 w-full py-6 border-t border-line">
+                                        <div className="left lg:w-1/4 w-full lg:pr-[15px]">
+                                            <div className="user">
+                                                <div className="text-title">{review.user?.name || 'Anonymous'}</div>
+                                                <div className="text-secondary2 text-sm mt-1">
+                                                    {new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                </div>
                                             </div>
-                                            <Link href={'#form-review'} className="reply-btn text-button text-secondary cursor-pointer hover:text-black">Reply</Link>
+                                        </div>
+                                        <div className="right lg:w-3/4 w-full lg:pl-[15px]">
+                                            <Rate currentRate={review.rating} size={16} />
+                                            {review.comment && <div className="body1 mt-3">{review.comment}</div>}
                                         </div>
                                     </div>
+                                ))
+                            )}
+                            {reviewsTotal > reviews.length && (
+                                <div className="text-button more-review-btn text-center mt-2 underline cursor-pointer"
+                                    onClick={() => reviewsApi.getForProduct(productMain.id, 1, reviews.length + 5).then(res => { setReviews(res.reviews); setReviewsTotal(res.pagination.total) }).catch(() => {})}>
+                                    View More ({reviewsTotal - reviews.length} remaining)
                                 </div>
-                            </div>
-                            <div className="item flex max-lg:flex-col gap-y-4 w-full py-6 border-t border-line">
-                                <div className="left lg:w-1/4 w-full lg:pr-[15px]">
-                                    <div className="list-img-review flex gap-2">
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                    </div>
-                                    <div className="user mt-3">
-                                        <div className="text-title">Tony Nguyen</div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-secondary2">1 days ago</div>
-                                            <div className="text-secondary2">-</div>
-                                            <div className="text-secondary2"><span>Yellow</span> / <span>XL</span></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="right lg:w-3/4 w-full lg:pl-[15px]">
-                                    <Rate currentRate={5} size={16} />
-                                    <div className="heading5 mt-3">Exceptional Fashion: The Perfect Blend of Style and Durability</div>
-                                    <div className="body1 mt-3">The fashion brand{String.raw`'s`} online shopping experience is seamless. The website is user-friendly, the product images are clear, and the checkout process is quick.</div>
-                                    <div className="action mt-3">
-                                        <div className="flex items-center gap-4">
-                                            <div className="like-btn flex items-center gap-1 cursor-pointer">
-                                                <Icon.HandsClapping size={18} />
-                                                <div className="text-button">20</div>
-                                            </div>
-                                            <Link href={'#form-review'} className="reply-btn text-button text-secondary cursor-pointer hover:text-black">Reply</Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="item flex max-lg:flex-col gap-y-4 w-full py-6 border-t border-line">
-                                <div className="left lg:w-1/4 w-full lg:pr-[15px]">
-                                    <div className="list-img-review flex gap-2">
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                        <Image
-                                            src={'/images/product/1000x1000.png'}
-                                            width={200}
-                                            height={200}
-                                            alt='img'
-                                            className='w-[60px] aspect-square rounded-lg'
-                                        />
-                                    </div>
-                                    <div className="user mt-3">
-                                        <div className="text-title">Tony Nguyen</div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-secondary2">1 days ago</div>
-                                            <div className="text-secondary2">-</div>
-                                            <div className="text-secondary2"><span>Yellow</span> / <span>XL</span></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="right lg:w-3/4 w-full lg:pl-[15px]">
-                                    <Rate currentRate={5} size={16} />
-                                    <div className="heading5 mt-3">Elevate Your Wardrobe: Stunning Dresses That Make a Statement</div>
-                                    <div className="body1 mt-3">I love how sustainable and ethically conscious this fashion brand is. They prioritize eco-friendly materials and fair trade practices, which makes me feel good about supporting them.</div>
-                                    <div className="action mt-3">
-                                        <div className="flex items-center gap-4">
-                                            <div className="like-btn flex items-center gap-1 cursor-pointer">
-                                                <Icon.HandsClapping size={18} />
-                                                <div className="text-button">20</div>
-                                            </div>
-                                            <Link href={'#form-review'} className="reply-btn text-button text-secondary cursor-pointer hover:text-black">Reply</Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="text-button more-review-btn text-center mt-2 underline">View More Comments</div>
+                            )}
                         </div>
                         <div id="form-review" className='form-review pt-6'>
-                            <div className="heading4">Leave A comment</div>
-                            <form className="grid sm:grid-cols-2 gap-4 gap-y-5 mt-6">
-                                <div className="name ">
-                                    <input className="border-line px-4 pt-3 pb-3 w-full rounded-lg" id="username" type="text" placeholder="Your Name *" required />
-                                </div>
-                                <div className="mail ">
-                                    <input className="border-line px-4 pt-3 pb-3 w-full rounded-lg" id="email" type="email" placeholder="Your Email *" required />
+                            <div className="heading4">Leave A Comment</div>
+                            {reviewSuccess && (
+                                <div className="bg-green-50 text-green-700 border border-green-200 rounded-lg px-4 py-3 mt-4">Review submitted successfully! Thank you.</div>
+                            )}
+                            {reviewError && (
+                                <div className="bg-red-50 text-red-700 border border-red-200 rounded-lg px-4 py-3 mt-4">{reviewError}</div>
+                            )}
+                            <form className="grid sm:grid-cols-2 gap-4 gap-y-5 mt-6" onSubmit={handleReviewSubmit}>
+                                <div className="col-span-full">
+                                    <div className="caption1 mb-2">Rating *</div>
+                                    <div className="flex gap-1">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button key={star} type="button" onClick={() => setReviewRating(star)}>
+                                                <Icon.Star size={24} weight={star <= reviewRating ? 'fill' : 'regular'} className={star <= reviewRating ? 'text-yellow' : 'text-line'} />
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                                 <div className="col-span-full message">
-                                    <textarea className="border border-line px-4 py-3 w-full rounded-lg" id="message" name="message" placeholder="Your message *" required></textarea>
-                                </div>
-                                <div className="col-span-full flex items-start -mt-2 gap-2">
-                                    <input type="checkbox" id="saveAccount" name="saveAccount" className='mt-1.5' />
-                                    <label className="" htmlFor="saveAccount">Save my name, email, and website in this browser for the next time I comment.</label>
+                                    <textarea className="border border-line px-4 py-3 w-full rounded-lg" rows={4} placeholder="Share your experience with this product..." value={reviewComment} onChange={e => setReviewComment(e.target.value)}></textarea>
                                 </div>
                                 <div className="col-span-full sm:pt-3">
-                                    <button className='button-main bg-white text-black border border-black'>Submit Reviews</button>
+                                    <button type="submit" disabled={reviewLoading} className='button-main bg-white text-black border border-black'>
+                                        {reviewLoading ? 'Submitting...' : 'Submit Review'}
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -1009,7 +932,7 @@ const Default: React.FC<Props> = ({ data, productId }) => {
                     <div className="container">
                         <div className="heading3 text-center">Related Products</div>
                         <div className="list-product hide-product-sold  grid lg:grid-cols-4 grid-cols-2 md:gap-[30px] gap-5 md:mt-10 mt-6">
-                            {data.slice(Number(productId), Number(productId) + 4).map((item, index) => (
+                            {data.filter(p => p.id !== productMain.id).slice(0, 4).map((item, index) => (
                                 <Product key={index} data={item} type='grid' style='style-1' />
                             ))}
                         </div>
